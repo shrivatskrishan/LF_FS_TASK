@@ -1,401 +1,198 @@
-// ============================================================================
-// FRONTEND: React Social Media App
-// ============================================================================
+import React from 'react';
+import { BrowserRouter } from 'react-router-dom';
+import AppRoutes from './routes/AppRoutes.jsx';
 
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+const appStyles = `
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: #eef1f6;
+        color: #111827;
+    }
+    button, input, textarea { font-family: inherit; }
+    .app { min-height: 100vh; }
+    .header {
+        background: #fff;
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        border-bottom: 1px solid #eef0f3;
+    }
+    .header-inner, .main { max-width: 760px; margin: 0 auto; }
+    .header-inner {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        padding: 0.85rem 1rem;
+        gap: 1rem;
+    }
+    .brand { color: #6d4aff; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.03em; }
+    nav { display: flex; align-items: center; gap: 0.15rem; }
+    nav a {
+        color: #4b5563;
+        text-decoration: none;
+        padding: 0.4rem 0.75rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.92rem;
+        font-weight: 600;
+    }
+    nav a svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+    nav a.active { background: #f3eeff; color: #6d4aff; }
+    nav a.active svg { fill: #6d4aff; stroke: #6d4aff; }
+    .logout-btn {
+        justify-self: end;
+        background: none;
+        border: none;
+        color: #6b7280;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+    .main { padding: 1.25rem 1rem 3rem; }
+    .feed-row { padding-bottom: 1rem; }
+    .create-post, .post, .auth-form, .search, .trending, .profile-card {
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    }
+    .create-post { padding: 1.15rem 1.2rem 1rem; margin-bottom: 1rem; display: flex; flex-direction: column; }
+    .create-post h2 { font-size: 1.02rem; margin-bottom: 0.85rem; }
+    .create-post input, .create-post textarea, .auth-form input, .search input, .add-comment input {
+        width: 100%;
+        border: none;
+        background: #f3f4f6;
+        border-radius: 12px;
+        padding: 0.8rem 0.9rem;
+        margin-bottom: 0.65rem;
+        color: #111827;
+        font-size: 0.95rem;
+        outline: none;
+    }
+    .create-post textarea { resize: vertical; min-height: 84px; }
+    .create-post .btn-primary { align-self: flex-end; margin-top: 0.2rem; }
+    .btn-primary {
+        background: #6d4aff;
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        padding: 0.55rem 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .btn-primary:disabled { opacity: 0.7; cursor: default; }
+    .post { padding: 1.05rem 1.15rem 1rem; }
+    .post-header { display: flex; align-items: center; gap: 0.75rem; }
+    .avatar { border-radius: 50%; object-fit: cover; display: block; }
+    .avatar-fallback {
+        border-radius: 50%;
+        background: #6d4aff;
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.72rem;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+    .post-date { color: #9ca3af; font-size: 0.92rem; }
+    .post-identity { display: flex; flex-direction: column; gap: 0.1rem; }
+    .post-identity strong { font-size: 0.95rem; }
+    .post h3 { margin: 0.85rem 0 0.35rem; font-size: 1.05rem; line-height: 1.35; }
+    .post-content { color: #1f2937; line-height: 1.5; font-size: 0.96rem; }
+    .post-image { width: 100%; display: block; border-radius: 14px; margin-top: 0.9rem; object-fit: cover; max-height: 420px; }
+    .post-stats { display: flex; align-items: center; gap: 0.85rem; margin-top: 0.85rem; color: #6b7280; }
+    .stat-btn, .stat-comment, .comment-likes {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+    }
+    .stat-btn { background: none; border: none; color: #6b7280; cursor: pointer; padding: 0.15rem; }
+    .stat-btn svg { width: 18px; height: 18px; fill: none; stroke: #9ca3af; stroke-width: 1.8; }
+    .stat-btn.liked { color: #ef4444; }
+    .stat-btn.liked svg { fill: #ef4444; stroke: #ef4444; }
+    .comment-likes svg { width: 18px; height: 18px; fill: #ef4444; stroke: #ef4444; }
+    .stat-comment {
+        background: #f3f4f6;
+        color: #6b7280;
+        border-radius: 8px;
+        padding: 0.18rem 0.45rem;
+        font-size: 0.88rem;
+    }
+    .stat-comment svg { width: 15px; height: 15px; fill: none; stroke: #9ca3af; stroke-width: 1.8; }
+    .post-delete { margin-left: auto; background: none; border: none; color: #9ca3af; cursor: pointer; font-weight: 600; }
+    .comments-section { margin-top: 0.85rem; }
+    .comment {
+        display: flex;
+        gap: 0.65rem;
+        background: #f3f4f6;
+        border-radius: 14px;
+        padding: 0.7rem 0.8rem;
+        margin-bottom: 0.5rem;
+    }
+    .comment-body p { color: #1f2937; line-height: 1.4; }
+    .comment-likes, .comment-like-btn { margin-top: 0.3rem; color: #6b7280; font-size: 0.82rem; font-weight: 600; }
+    .comment-like-btn {
+        background: none;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        cursor: pointer;
+        padding: 0;
+    }
+    .comment-like-btn svg { width: 14px; height: 14px; fill: none; stroke: #9ca3af; stroke-width: 1.8; }
+    .comment-like-btn.liked { color: #ef4444; }
+    .comment-like-btn.liked svg { fill: #ef4444; stroke: #ef4444; }
+    .comment-likes svg { width: 14px; height: 14px; }
+    .add-comment { display: flex; align-items: center; gap: 0.65rem; margin-top: 0.35rem; }
+    .add-comment input { margin: 0; width: auto; flex: 1; min-width: 0; border-radius: 999px; background: #fff; border: 1px solid #e5e7eb; }
+    .auth-form, .search, .trending, .profile-card { padding: 1.15rem; }
+    .auth-form { max-width: 420px; margin: 4rem auto; }
+    .auth-form h2, .trending h2, .profile-card h2 { margin-bottom: 0.85rem; }
+    .auth-form button[type="submit"], .search form button {
+        background: #6d4aff;
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        padding: 0.6rem 1rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .auth-switch { display: block; margin-top: 0.85rem; background: none; border: none; color: #6d4aff; cursor: pointer; font-weight: 600; }
+    .auth-error { color: #b91c1c; margin-bottom: 0.5rem; }
+    .auth-status, .empty-state { padding: 1rem; color: #6b7280; }
+    .error-state { margin: 0.75rem 0; padding: 1rem; border: 1px solid #fecaca; background: #fef2f2; color: #991b1b; border-radius: 12px; }
+    .error-state h3 { margin-bottom: 0.35rem; }
+    .error-state button { margin-top: 0.75rem; padding: 0.45rem 0.8rem; cursor: pointer; border-radius: 8px; border: none; }
+    .trending h2 { font-size: 1.15rem; }
+    .trending-item, .search-result { padding: 0.85rem 0; border-bottom: 1px solid #eef0f3; }
+    .trending-item:last-child, .search-result:last-child { border-bottom: none; }
+    .search { margin-bottom: 1rem; }
+    .search form { display: flex; gap: 0.6rem; align-items: center; }
+    .search input { margin: 0; width: auto; flex: 1; min-width: 0; }
+    .profile-card { text-align: center; }
+    .profile-avatar { display: flex; justify-content: center; margin-bottom: 0.75rem; }
+    .trending { margin-bottom: 1rem; }
+    .profile-card .stats { display: flex; justify-content: center; gap: 1.5rem; margin-top: 1rem; color: #4b5563; font-weight: 600; }
+    .profile-card p { color: #4b5563; line-height: 1.5; }
+`;
 
-const API_BASE_URL = 'http://localhost:3000/api';
-
-// ============================================================================
-// 1. USER PROFILE COMPONENT
-// ============================================================================
-const UserProfile = ({ userId }) => {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        fetchUserProfile();
-    }, [userId]);
-
-    const fetchUserProfile = async () => {
-        try {
-            const response = await axios.get(`${API_BASE_URL}/users/${userId}`);
-            setUser(response.data);
-            setLoading(false);
-        } catch (error) {
-            console.error('Error fetching user:', error);
-            setLoading(false);
-        }
-    };
-
-    if (loading) return <div>Loading...</div>;
-    if (!user) return <div>User not found</div>;
-
-    return (
-        <div className="user-profile">
-            <img src={user.profile_picture_url} alt={user.username} />
-            <h2>{user.username}</h2>
-            <p>{user.bio}</p>
-            <div className="stats">
-                <div>Posts: {user.total_posts}</div>
-                <div>Comments: {user.total_comments}</div>
-                <div>Likes: {user.total_post_likes || 0}</div>
-            </div>
-        </div>
-    );
-};
-
-// ============================================================================
-// 2. POST COMPONENT
-// ============================================================================
-const Post = ({ post, onLike, onDelete, userId }) => {
-    const [showComments, setShowComments] = useState(false);
-    const [comments, setComments] = useState([]);
-    const [newComment, setNewComment] = useState('');
-
-    const fetchComments = async () => {
-        try {
-            const response = await axios.get(`${API_BASE_URL}/posts/${post.id}/comments`);
-            setComments(response.data);
-        } catch (error) {
-            console.error('Error fetching comments:', error);
-        }
-    };
-
-    const handleShowComments = () => {
-        if (!showComments) {
-            fetchComments();
-        }
-        setShowComments(!showComments);
-    };
-
-    const handleAddComment = async () => {
-        if (!newComment.trim()) return;
-
-        try {
-            const token = localStorage.getItem('token');
-            await axios.post(
-                `${API_BASE_URL}/posts/${post.id}/comments`,
-                { content: newComment },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            setNewComment('');
-            fetchComments();
-        } catch (error) {
-            console.error('Error posting comment:', error);
-        }
-    };
-
-    return (
-        <div className="post">
-            <div className="post-header">
-                <img src={post.profile_picture_url} alt={post.username} />
-                <div>
-                    <h4>{post.username}</h4>
-                    <small>{new Date(post.created_at).toLocaleDateString()}</small>
-                </div>
-            </div>
-
-            <h3>{post.title}</h3>
-            <p>{post.content}</p>
-            {post.image_url && <img src={post.image_url} alt="Post" />}
-
-            <div className="post-stats">
-                <button onClick={() => onLike(post.id)}>❤️ {post.likes_count}</button>
-                <button onClick={handleShowComments}>💬 {post.comment_count}</button>
-                {userId === post.user_id && (
-                    <button onClick={() => onDelete(post.id)}>🗑️ Delete</button>
-                )}
-            </div>
-
-            {showComments && (
-                <div className="comments-section">
-                    {comments.map(comment => (
-                        <div key={comment.id} className="comment">
-                            <img src={comment.profile_picture_url} alt={comment.username} />
-                            <div>
-                                <strong>{comment.username}</strong>
-                                <p>{comment.content}</p>
-                                <small>❤️ {comment.likes_count}</small>
-                            </div>
-                        </div>
-                    ))}
-
-                    <div className="add-comment">
-                        <input
-                            type="text"
-                            placeholder="Add a comment..."
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
-                        />
-                        <button onClick={handleAddComment}>Post</button>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
-
-// ============================================================================
-// 3. FEED COMPONENT
-// ============================================================================
-const Feed = ({ userId }) => {
-    const [posts, setPosts] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        fetchFeed();
-    }, []);
-
-    const fetchFeed = async () => {
-        try {
-            const response = await axios.get(`${API_BASE_URL}/posts`);
-            setPosts(response.data.posts);
-            setLoading(false);
-        } catch (error) {
-            console.error('Error fetching feed:', error);
-            setLoading(false);
-        }
-    };
-
-    const handleLike = async (postId) => {
-        try {
-            const token = localStorage.getItem('token');
-            await axios.post(
-                `${API_BASE_URL}/posts/${postId}/like`,
-                {},
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            fetchFeed();
-        } catch (error) {
-            console.error('Error liking post:', error);
-        }
-    };
-
-    const handleDelete = async (postId) => {
-        try {
-            const token = localStorage.getItem('token');
-            await axios.delete(`${API_BASE_URL}/posts/${postId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            fetchFeed();
-        } catch (error) {
-            console.error('Error deleting post:', error);
-        }
-    };
-
-    if (loading) return <div>Loading feed...</div>;
-
-    return (
-        <div className="feed">
-            {posts.map(post => (
-                <Post
-                    key={post.id}
-                    post={post}
-                    onLike={handleLike}
-                    onDelete={handleDelete}
-                    userId={userId}
-                />
-            ))}
-        </div>
-    );
-};
-
-// ============================================================================
-// 4. CREATE POST COMPONENT
-// ============================================================================
-const CreatePost = ({ onPostCreated }) => {
-    const [title, setTitle] = useState('');
-    const [content, setContent] = useState('');
-    const [loading, setLoading] = useState(false);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-
-        try {
-            const token = localStorage.getItem('token');
-            await axios.post(
-                `${API_BASE_URL}/posts`,
-                { title, content },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            setTitle('');
-            setContent('');
-            onPostCreated();
-        } catch (error) {
-            console.error('Error creating post:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <form className="create-post" onSubmit={handleSubmit}>
-            <input
-                type="text"
-                placeholder="Post title..."
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-            />
-            <textarea
-                placeholder="What's on your mind?"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                required
-            />
-            <button type="submit" disabled={loading}>
-                {loading ? 'Posting...' : 'Post'}
-            </button>
-        </form>
-    );
-};
-
-// ============================================================================
-// 5. TRENDING POSTS COMPONENT
-// ============================================================================
-const TrendingPosts = () => {
-    const [posts, setPosts] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        fetchTrending();
-    }, []);
-
-    const fetchTrending = async () => {
-        try {
-            const response = await axios.get(`${API_BASE_URL}/trending`);
-            setPosts(response.data);
-            setLoading(false);
-        } catch (error) {
-            console.error('Error fetching trending:', error);
-            setLoading(false);
-        }
-    };
-
-    if (loading) return <div>Loading trending posts...</div>;
-
-    return (
-        <div className="trending">
-            <h2>Trending Posts (Last 7 Days)</h2>
-            {posts.map(post => (
-                <div key={post.id} className="trending-item">
-                    <h4>{post.title}</h4>
-                    <p>By: {post.username}</p>
-                    <p>❤️ {post.likes_count} | 💬 {post.comment_count}</p>
-                </div>
-            ))}
-        </div>
-    );
-};
-
-// ============================================================================
-// 6. SEARCH COMPONENT
-// ============================================================================
-const Search = () => {
-    const [query, setQuery] = useState('');
-    const [results, setResults] = useState([]);
-    const [searched, setSearched] = useState(false);
-
-    const handleSearch = async (e) => {
-        e.preventDefault();
-        if (!query.trim()) return;
-
-        try {
-            const response = await axios.get(`${API_BASE_URL}/search`, {
-                params: { q: query }
-            });
-            setResults(response.data);
-            setSearched(true);
-        } catch (error) {
-            console.error('Error searching:', error);
-        }
-    };
-
-    return (
-        <div className="search">
-            <form onSubmit={handleSearch}>
-                <input
-                    type="text"
-                    placeholder="Search posts..."
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                />
-                <button type="submit">Search</button>
-            </form>
-
-            {searched && (
-                <div className="search-results">
-                    {results.length === 0 ? (
-                        <p>No results found</p>
-                    ) : (
-                        results.map(post => (
-                            <div key={post.id} className="search-result">
-                                <h4>{post.title}</h4>
-                                <p>{post.content.substring(0, 100)}...</p>
-                                <p>By: {post.username}</p>
-                            </div>
-                        ))
-                    )}
-                </div>
-            )}
-        </div>
-    );
-};
-
-// ============================================================================
-// 7. MAIN APP COMPONENT
-// ============================================================================
 const App = () => {
-    const [userId] = useState(1);
-    const [activeTab, setActiveTab] = useState('feed');
-    const [refreshFeed, setRefreshFeed] = useState(false);
-
     return (
-        <div className="app">
-            <header className="header">
-                <h1>📱 Social Media App</h1>
-                <nav>
-                    <button onClick={() => setActiveTab('feed')}>Feed</button>
-                    <button onClick={() => setActiveTab('trending')}>Trending</button>
-                    <button onClick={() => setActiveTab('search')}>Search</button>
-                    <button onClick={() => setActiveTab('profile')}>Profile</button>
-                </nav>
-            </header>
-
-            <main className="main">
-                {activeTab === 'feed' && (
-                    <>
-                        <CreatePost onPostCreated={() => setRefreshFeed(!refreshFeed)} />
-                        <Feed userId={userId} key={refreshFeed} />
-                    </>
-                )}
-                {activeTab === 'trending' && <TrendingPosts />}
-                {activeTab === 'search' && <Search />}
-                {activeTab === 'profile' && <UserProfile userId={userId} />}
-            </main>
-
-            <style>{`
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-                .app { max-width: 800px; margin: 0 auto; }
-                .header { background: #1f2937; color: white; padding: 1rem; }
-                nav button { margin: 0 0.5rem; padding: 0.5rem 1rem; cursor: pointer; }
-                .post { border: 1px solid #e5e7eb; padding: 1rem; margin: 1rem 0; border-radius: 8px; }
-                .post-header { display: flex; gap: 1rem; margin-bottom: 1rem; }
-                .post-header img { width: 40px; height: 40px; border-radius: 50%; }
-                .post-stats button { margin-right: 1rem; padding: 0.5rem; cursor: pointer; }
-                .comments-section { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; }
-                .comment { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
-                .comment img { width: 32px; height: 32px; border-radius: 50%; }
-                .create-post { margin: 1rem 0; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 8px; }
-                .create-post input, .create-post textarea { width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; }
-                .trending { padding: 1rem; }
-                .trending-item { padding: 0.5rem; border-bottom: 1px solid #e5e7eb; }
-            `}</style>
-        </div>
+        <BrowserRouter>
+            <div className="app">
+                <AppRoutes />
+                <style>{appStyles}</style>
+            </div>
+        </BrowserRouter>
     );
 };
 
