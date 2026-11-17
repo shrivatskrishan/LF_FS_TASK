@@ -1,4 +1,5 @@
 const { Comment, Post, User, Like } = require('../models');
+const cache = require('../cache');
 const AppError = require('../utils/AppError');
 const parseId = require('../utils/parseId');
 
@@ -9,19 +10,20 @@ async function listByPost(rawPostId, userId) {
         throw new AppError('Post not found', 404, 'NOT_FOUND');
     }
 
-    const rows = await Comment.findAll({
-        where: { post_id: postId },
-        include: [
-            {
-                model: User,
-                as: 'author',
-                attributes: ['id', 'username', 'profile_picture_url']
-            }
-        ],
-        order: [['created_at', 'DESC']]
+    const comments = await cache.remember(`comments:${postId}`, async () => {
+        const rows = await Comment.findAll({
+            where: { post_id: postId },
+            include: [
+                {
+                    model: User,
+                    as: 'author',
+                    attributes: ['id', 'username', 'profile_picture_url']
+                }
+            ],
+            order: [['created_at', 'DESC']]
+        });
+        return rows.map((row) => row.toJSON());
     });
-
-    const comments = rows.map((row) => row.toJSON());
     let likedIds = new Set();
 
     if (userId && comments.length) {
@@ -60,6 +62,7 @@ async function createComment(rawPostId, userId, content) {
         content: cleanContent
     });
 
+    await cache.invalidate();
     return {
         id: comment.id,
         content: comment.content
@@ -79,6 +82,7 @@ async function deleteComment(rawId, userId) {
     }
 
     await comment.destroy();
+    await cache.invalidate();
     return { message: 'Comment deleted' };
 }
 

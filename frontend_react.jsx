@@ -183,6 +183,28 @@ const appStyles = `
     .trending { margin-bottom: 1rem; }
     .profile-card .stats { display: flex; justify-content: center; gap: 1.5rem; margin-top: 1rem; color: #4b5563; font-weight: 600; }
     .profile-card p { color: #4b5563; line-height: 1.5; }
+    .notice-stack {
+        position: fixed;
+        top: 4.75rem;
+        right: 1rem;
+        z-index: 40;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        width: min(320px, calc(100vw - 2rem));
+    }
+    .notice {
+        background: #fff;
+        color: #111827;
+        text-align: left;
+        border: none;
+        border-radius: 14px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+        padding: 0.85rem 0.95rem;
+        cursor: pointer;
+        font-weight: 600;
+        line-height: 1.4;
+    }
 `;
 
 const App = () => {

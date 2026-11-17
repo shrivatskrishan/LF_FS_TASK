@@ -1,4 +1,5 @@
 const { User, Post, Comment } = require('../models');
+const cache = require('../cache');
 const AppError = require('../utils/AppError');
 const parseId = require('../utils/parseId');
 
@@ -7,14 +8,21 @@ const publicUser = {
 };
 
 async function listUsers() {
-    return User.findAll({
-        ...publicUser,
-        limit: 100
+    return cache.remember('users:list', async () => {
+        const users = await User.findAll({
+            ...publicUser,
+            limit: 100
+        });
+        return users.map((user) => user.toJSON());
     });
 }
 
 async function getUserById(rawId) {
     const id = parseId(rawId, 'user id');
+    return cache.remember(`users:${id}`, () => loadUser(id));
+}
+
+async function loadUser(id) {
     const user = await User.findByPk(id, {
         ...publicUser,
         include: [

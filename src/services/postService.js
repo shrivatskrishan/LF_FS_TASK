@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const { Post, User, Comment, Like } = require('../models');
+const cache = require('../cache');
 const AppError = require('../utils/AppError');
 const parseId = require('../utils/parseId');
 
@@ -67,30 +68,37 @@ function assertOwner(record, userId) {
 }
 
 async function listFeed(userId) {
-    const rows = await Post.findAll({
-        include: [authorInclude(), commentsInclude()],
-        order: [['created_at', 'DESC']]
+    const posts = await cache.remember('posts:feed', async () => {
+        const rows = await Post.findAll({
+            include: [authorInclude(), commentsInclude()],
+            order: [['created_at', 'DESC']]
+        });
+        return rows.map(withCommentCount);
     });
 
-    return { posts: await withLikedByMe(rows.map(withCommentCount), userId) };
+    return { posts: await withLikedByMe(posts, userId) };
 }
 
 async function getPostById(rawId) {
     const id = parseId(rawId, 'post id');
-    const post = await Post.findByPk(id, {
-        include: [
-            authorInclude(),
-            {
-                model: Comment,
-                as: 'comments',
-                include: [authorInclude()]
-            }
-        ]
-    });
+    const post = await cache.remember(`posts:${id}`, async () => {
+        const row = await Post.findByPk(id, {
+            include: [
+                authorInclude(),
+                {
+                    model: Comment,
+                    as: 'comments',
+                    include: [authorInclude()]
+                }
+            ]
+        });
 
-    if (!post) {
-        throw new AppError('Post not found', 404, 'NOT_FOUND');
-    }
+        if (!row) {
+            throw new AppError('Post not found', 404, 'NOT_FOUND');
+        }
+
+        return row.toJSON();
+    });
 
     return post;
 }
@@ -110,7 +118,7 @@ async function createPost(userId, { title, content, image_url }) {
         image_url: image_url || null
     });
 
-    return {
+    const created = {
         id: post.id,
         user_id: post.user_id,
         title: post.title,
@@ -119,6 +127,8 @@ async function createPost(userId, { title, content, image_url }) {
         likes_count: post.likes_count,
         createdAt: post.createdAt
     };
+    await cache.invalidate();
+    return created;
 }
 
 async function updatePost(rawId, userId, { title, content }) {
@@ -136,6 +146,7 @@ async function updatePost(rawId, userId, { title, content }) {
         content: content || post.content
     });
 
+    await cache.invalidate();
     return { message: 'Post updated' };
 }
 
@@ -148,24 +159,34 @@ async function deletePost(rawId, userId) {
     }
 
     assertOwner(post, userId);
+    const removed = {
+        message: 'Post deleted',
+        postId: post.id,
+        authorId: post.user_id,
+        title: post.title
+    };
     await post.destroy();
-    return { message: 'Post deleted' };
+    await cache.invalidate();
+    return removed;
 }
 
 async function listTrending(userId) {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const rows = await Post.findAll({
-        where: {
-            created_at: { [Op.gte]: sevenDaysAgo }
-        },
-        include: [authorInclude(), commentsInclude()],
-        order: [['likes_count', 'DESC']],
-        limit: 20
+    const posts = await cache.remember('posts:trending', async () => {
+        const rows = await Post.findAll({
+            where: {
+                created_at: { [Op.gte]: sevenDaysAgo }
+            },
+            include: [authorInclude(), commentsInclude()],
+            order: [['likes_count', 'DESC']],
+            limit: 20
+        });
+        return rows.map(withCommentCount);
     });
 
-    return withLikedByMe(rows.map(withCommentCount), userId);
+    return withLikedByMe(posts, userId);
 }
 
 async function searchPosts(query, userId) {
@@ -174,19 +195,22 @@ async function searchPosts(query, userId) {
         throw new AppError('Search query required', 400, 'VALIDATION_ERROR');
     }
 
-    const rows = await Post.findAll({
-        where: {
-            [Op.or]: [
-                { title: { [Op.iLike]: `%${q}%` } },
-                { content: { [Op.iLike]: `%${q}%` } }
-            ]
-        },
-        include: [authorInclude(), commentsInclude()],
-        order: [['created_at', 'DESC']],
-        limit: 20
+    const posts = await cache.remember(`posts:search:${q.toLowerCase()}`, async () => {
+        const rows = await Post.findAll({
+            where: {
+                [Op.or]: [
+                    { title: { [Op.iLike]: `%${q}%` } },
+                    { content: { [Op.iLike]: `%${q}%` } }
+                ]
+            },
+            include: [authorInclude(), commentsInclude()],
+            order: [['created_at', 'DESC']],
+            limit: 20
+        });
+        return rows.map(withCommentCount);
     });
 
-    return withLikedByMe(rows.map(withCommentCount), userId);
+    return withLikedByMe(posts, userId);
 }
 
 module.exports = {

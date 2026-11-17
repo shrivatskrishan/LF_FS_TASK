@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth.js';
 import api from '../services/api.js';
 import PostCard from '../components/PostCard.jsx';
 import ErrorState, { getErrorMessage } from '../components/ErrorState.jsx';
+import { useLivePosts } from '../hooks/useNotifications.jsx';
 
 const SearchPage = () => {
     const { user } = useAuth();
@@ -12,6 +13,7 @@ const SearchPage = () => {
     const [error, setError] = useState('');
     const [actionError, setActionError] = useState('');
     const likeLocks = useRef(new Set());
+    useLivePosts(setResults);
 
     const handleSearch = async (event) => {
         event.preventDefault();

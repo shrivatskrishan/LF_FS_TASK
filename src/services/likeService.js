@@ -1,4 +1,5 @@
 const { Like, Post, Comment } = require('../models');
+const cache = require('../cache');
 const AppError = require('../utils/AppError');
 const parseId = require('../utils/parseId');
 
@@ -30,8 +31,16 @@ async function likePost(rawPostId, userId) {
         post_id: postId
     });
     await post.increment('likes_count');
+    await post.reload();
+    await cache.invalidate();
 
-    return { message: 'Post liked' };
+    return {
+        message: 'Post liked',
+        postId: post.id,
+        authorId: post.user_id,
+        title: post.title,
+        likesCount: post.likes_count
+    };
 }
 
 async function unlikePost(rawPostId, userId) {
@@ -51,8 +60,16 @@ async function unlikePost(rawPostId, userId) {
     if (post.likes_count > 0) {
         await post.decrement('likes_count');
     }
+    await post.reload();
+    await cache.invalidate();
 
-    return { message: 'Post unliked' };
+    return {
+        message: 'Post unliked',
+        postId: post.id,
+        authorId: post.user_id,
+        title: post.title,
+        likesCount: post.likes_count
+    };
 }
 
 async function findCommentLike(userId, commentId) {
@@ -83,6 +100,7 @@ async function likeComment(rawCommentId, userId) {
         comment_id: commentId
     });
     await comment.increment('likes_count');
+    await cache.invalidate();
 
     return { message: 'Comment liked' };
 }
@@ -104,6 +122,7 @@ async function unlikeComment(rawCommentId, userId) {
     if (comment.likes_count > 0) {
         await comment.decrement('likes_count');
     }
+    await cache.invalidate();
 
     return { message: 'Comment unliked' };
 }

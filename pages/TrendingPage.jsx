@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api.js';
 import Avatar from '../components/Avatar.jsx';
 import ErrorState, { getErrorMessage } from '../components/ErrorState.jsx';
+import { useLivePosts } from '../hooks/useNotifications.jsx';
 
 function formatDate(value) {
     const date = new Date(value);
@@ -17,6 +18,7 @@ const TrendingPage = () => {
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    useLivePosts(setPosts);
 
     const fetchTrending = async () => {
         setLoading(true);

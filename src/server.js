@@ -1,5 +1,7 @@
 const app = require('./app');
 const { sequelize } = require('./models');
+const { connectRedis } = require('./config/redis');
+const { attachNotifications } = require('./realtime/notifications');
 
 function start() {
     const port = process.env.PORT || 3000;
@@ -9,11 +11,14 @@ function start() {
         .then(() => console.log('✓ Database connected'))
         .catch((err) => console.error('✗ Database connection failed:', err));
 
+    connectRedis();
+
     return sequelize.sync({ alter: false })
         .then(() => {
             const server = app.listen(port, () => {
                 console.log(`✓ Server running on http://localhost:${port}`);
             });
+            attachNotifications(server);
             server.requestTimeout = requestTimeoutMs;
             server.headersTimeout = requestTimeoutMs + 1000;
             server.setTimeout(requestTimeoutMs);

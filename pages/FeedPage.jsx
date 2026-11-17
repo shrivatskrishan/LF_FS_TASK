@@ -5,6 +5,7 @@ import api from '../services/api.js';
 import CreatePost from '../components/CreatePost.jsx';
 import PostCard from '../components/PostCard.jsx';
 import ErrorState, { getErrorMessage } from '../components/ErrorState.jsx';
+import { useLivePosts } from '../hooks/useNotifications.jsx';
 
 const FeedPage = () => {
     const { user } = useAuth();
@@ -15,6 +16,7 @@ const FeedPage = () => {
     const [scrollMargin, setScrollMargin] = useState(0);
     const listRef = useRef(null);
     const likeLocks = useRef(new Set());
+    useLivePosts(setPosts);
 
     const fetchFeed = async (silent = false) => {
         if (!silent) setLoading(true);

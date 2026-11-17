@@ -23,13 +23,15 @@
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "express": "^4.22.1",
+    "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.16.2",
     "pg": "^8.23.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.30.6",
-    "sequelize": "^6.37.7"
+    "sequelize": "^6.37.7",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.1.1",

@@ -1,6 +1,8 @@
 const asyncHandler = require('../utils/asyncHandler');
 const { sendSuccess } = require('../utils/apiResponse');
 const postService = require('../services/postService');
+const { User } = require('../models');
+const { publish } = require('../realtime/notifications');
 
 const list = asyncHandler(async (req, res) => {
     const feed = await postService.listFeed(req.user?.id);
@@ -28,6 +30,15 @@ const update = asyncHandler(async (req, res) => {
 
 const remove = asyncHandler(async (req, res) => {
     const result = await postService.deletePost(req.params.id, req.user.id);
+    const actor = await User.findByPk(req.user.id, { attributes: ['username'] });
+    publish({
+        type: 'post_deleted',
+        postId: result.postId,
+        title: result.title,
+        authorId: result.authorId,
+        actorId: req.user.id,
+        actorName: actor ? actor.username : 'Someone'
+    });
     sendSuccess(res, { message: result.message, data: result });
 });
 
